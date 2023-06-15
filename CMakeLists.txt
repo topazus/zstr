@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-project(zstr LANGUAGES CXX)
+project(zstr
+  LANGUAGES CXX
+  VERSION 1.0.7
+)
 
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.12)
   cmake_policy(SET CMP0074 NEW) # find_package uses <PackageName>_ROOT variables
@@ -12,6 +15,11 @@ if(${CMAKE_VERSION} VERSION_LESS 3.13)
     "You may need to add \${ZSTR_INCLUDE_DIRS} to your include directories\n"
     "target_include_directories(YourTarget PRIVATE \${ZSTR_INCLUDE_DIRS}) "
   )
+endif()
+
+option(ZSTR_INSTALL "Install CMake targets during install step." OFF)
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  set(ZSTR_INSTALL ON)
 endif()
 
 # -- locate zlib
@@ -26,7 +34,7 @@ add_library(zstr::zstr ALIAS zstr)
 
 # -- set target properties
 
-target_include_directories(zstr INTERFACE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(zstr INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>")
 target_link_libraries(zstr INTERFACE ZLIB::ZLIB)
 target_compile_features(zstr INTERFACE cxx_std_11) # require c++11 flag
 
@@ -44,3 +52,31 @@ message(STATUS
           libraries: ZLIB::ZLIB
           features : cxx_std_11"
 )
+
+if(ZSTR_INSTALL)
+  include(GNUInstallDirs)
+  include(CMakePackageConfigHelpers)
+  install(
+    TARGETS zstr
+    EXPORT zstrTargets
+  )
+  write_basic_package_version_file(
+    zstrConfigVersion.cmake
+    COMPATIBILITY SameMajorVersion
+    ARCH_INDEPENDENT
+  )
+  install(
+    FILES
+      "${PROJECT_SOURCE_DIR}/zstrConfig.cmake"
+      "${PROJECT_BINARY_DIR}/zstrConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/zstr"
+  )
+  install(
+    EXPORT zstrTargets
+    FILE zstrTargets.cmake
+    NAMESPACE zstr::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/zstr"
+  )
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+endif()
